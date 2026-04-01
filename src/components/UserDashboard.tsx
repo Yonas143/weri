@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Radio, Play, Pause, MapPin, Library, Sparkles, LogOut, ChevronDown, Bell, Mic } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/src/lib/utils";
@@ -12,30 +12,66 @@ interface Station {
 }
 
 interface UserDashboardProps {
-  stations: Station[];
-  recordings: any[];
-  adStats: any;
-  currentLiveStation: Station | null;
-  isLivePlaying: boolean;
-  onLivePlay: (station: Station) => void;
   onSignOut: () => void;
 }
 
-export function UserDashboard({
-  stations,
-  recordings,
-  adStats,
-  currentLiveStation,
-  isLivePlaying,
-  onLivePlay,
-  onSignOut,
-}: UserDashboardProps) {
+export function UserDashboard({ onSignOut }: UserDashboardProps) {
   const { user } = useAuth();
-  const [showUserMenu, setShowUserMenu] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<"stations" | "library" | "ads" | "request">("stations");
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState<"stations" | "library" | "ads" | "request">("stations");
+
+  const [stations, setStations] = useState<Station[]>([]);
+  const [recordings, setRecordings] = useState<any[]>([]);
+  const [adStats, setAdStats] = useState<any>(null);
+  const [currentLiveStation, setCurrentLiveStation] = useState<Station | null>(null);
+  const [isLivePlaying, setIsLivePlaying] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const apiBase = (import.meta as any).env?.VITE_API_URL || "";
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [stationsRes, recordingsRes, adsRes] = await Promise.all([
+          fetch(`${apiBase}/api/stations`),
+          fetch(`${apiBase}/api/recordings`),
+          fetch(`${apiBase}/api/ads/stats`),
+        ]);
+        if (stationsRes.ok) setStations(await stationsRes.json());
+        if (recordingsRes.ok) setRecordings(await recordingsRes.json());
+        if (adsRes.ok) setAdStats(await adsRes.json());
+      } catch (e) {
+        console.error("Failed to fetch user dashboard data:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleLivePlay = (station: Station) => {
+    if (currentLiveStation?.id === station.id) {
+      if (isLivePlaying) {
+        audioRef.current?.pause();
+        setIsLivePlaying(false);
+      } else {
+        audioRef.current?.play();
+        setIsLivePlaying(true);
+      }
+    } else {
+      setCurrentLiveStation(station);
+      setIsLivePlaying(true);
+      if (audioRef.current) {
+        audioRef.current.src = `https://radio.garden/api/ara/content/listen/${station.id}/channel.mp3`;
+        audioRef.current.play();
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans">
+      <audio ref={audioRef} onPlay={() => setIsLivePlaying(true)} onPause={() => setIsLivePlaying(false)} />
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-white/5 bg-black/40 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -158,7 +194,7 @@ export function UserDashboard({
                           <Radio className="w-5 h-5 text-white/60" />
                         </div>
                         <button
-                          onClick={() => onLivePlay(station)}
+                          onClick={() => handleLivePlay(station)}
                           className={cn(
                             "w-9 h-9 rounded-full flex items-center justify-center transition-all",
                             isCurrentLive && isLivePlaying
