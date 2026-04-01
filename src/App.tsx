@@ -41,7 +41,9 @@ import {
   History,
   Menu,
   X,
-  Bell
+  Bell,
+  LogOut,
+  ChevronDown
 } from "lucide-react";
 import { 
   PieChart as RePieChart, 
@@ -61,6 +63,8 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/src/lib/utils";
 import { analyzeCommercialsFrontend, generateEmbeddingsFrontend } from "./services/ai";
+import { useAuth } from "./components/AuthProvider";
+import { LoginPage } from "./components/LoginPage";
 
 interface Station {
   id: string;
@@ -87,6 +91,8 @@ interface RecordingFile {
 }
 
 export default function App() {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [stations, setStations] = useState<Station[]>([]);
   const [status, setStatus] = useState<RecordingStatus>({});
   const [recordings, setRecordings] = useState<RecordingFile[]>([]);
@@ -416,6 +422,25 @@ export default function App() {
     }
   };
 
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-orange-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-orange-900/40 mx-auto mb-4 animate-pulse">
+            <Radio className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-sm text-white/40">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-orange-500/30">
       <audio ref={audioRef} onPlay={() => setIsLivePlaying(true)} onPause={() => setIsLivePlaying(false)} />
@@ -567,6 +592,71 @@ export default function App() {
               )}
               <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group cursor-pointer hover:bg-white/10 transition-all">
                 <Bell className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
+              </div>
+              
+              {/* User Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                >
+                  <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-sm font-bold">
+                    {user?.email?.[0].toUpperCase() || 'U'}
+                  </div>
+                  <div className="hidden md:block text-left">
+                    <div className="text-xs font-bold text-white/90 leading-tight">
+                      {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                    </div>
+                    <div className="text-[10px] text-white/40">
+                      {user?.email}
+                    </div>
+                  </div>
+                  <ChevronDown className={cn(
+                    "w-4 h-4 text-white/40 transition-transform",
+                    showUserMenu && "rotate-180"
+                  )} />
+                </button>
+
+                {/* Dropdown Menu */}
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-64 glass-card rounded-2xl border border-white/10 overflow-hidden shadow-2xl z-50"
+                    >
+                      <div className="p-4 border-b border-white/5">
+                        <div className="text-sm font-bold text-white/90 mb-1">
+                          {user?.user_metadata?.full_name || 'User'}
+                        </div>
+                        <div className="text-xs text-white/40">{user?.email}</div>
+                      </div>
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setActiveTab('settings');
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-all text-left"
+                        >
+                          <Settings className="w-4 h-4 text-white/40" />
+                          <span className="text-sm font-medium">Settings</span>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setShowUserMenu(false);
+                            await signOut();
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-400 transition-all text-left"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span className="text-sm font-medium">Sign Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </header>
