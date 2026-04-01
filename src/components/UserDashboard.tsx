@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Play, Pause, MapPin, Library, Sparkles, LogOut, ChevronDown, Bell, Mic } from "lucide-react";
+import {
+  Radio, Play, Pause, MapPin, Library, Sparkles,
+  LogOut, ChevronDown, Bell, Mic, RefreshCw
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/src/lib/utils";
 import { useAuth } from "./AuthProvider";
@@ -9,6 +12,14 @@ interface Station {
   id: string;
   title: string;
   city: string;
+}
+
+interface Recording {
+  station: string;
+  date: string;
+  file: string;
+  path: string;
+  isAnalyzed?: boolean;
 }
 
 interface UserDashboardProps {
@@ -21,30 +32,28 @@ export function UserDashboard({ onSignOut }: UserDashboardProps) {
   const [activeTab, setActiveTab] = useState<"stations" | "library" | "ads" | "request">("stations");
 
   const [stations, setStations] = useState<Station[]>([]);
-  const [recordings, setRecordings] = useState<any[]>([]);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [adStats, setAdStats] = useState<any>(null);
   const [currentLiveStation, setCurrentLiveStation] = useState<Station | null>(null);
   const [isLivePlaying, setIsLivePlaying] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
-
-  const apiBase = (import.meta as any).env?.VITE_API_URL || "";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [stationsRes, recordingsRes, adsRes] = await Promise.all([
-          fetch(`${apiBase}/api/stations`),
-          fetch(`${apiBase}/api/recordings`),
-          fetch(`${apiBase}/api/ads/stats`),
+          fetch("/api/stations"),
+          fetch("/api/recordings"),
+          fetch("/api/ads/stats"),
         ]);
         if (stationsRes.ok) setStations(await stationsRes.json());
         if (recordingsRes.ok) setRecordings(await recordingsRes.json());
         if (adsRes.ok) setAdStats(await adsRes.json());
       } catch (e) {
-        console.error("Failed to fetch user dashboard data:", e);
+        console.error("Failed to fetch data:", e);
       } finally {
-        setLoading(false);
+        setDataLoading(false);
       }
     };
     fetchData();
@@ -69,9 +78,21 @@ export function UserDashboard({ onSignOut }: UserDashboardProps) {
     }
   };
 
+  const tabs = [
+    { id: "stations", label: "Live Stations", icon: Radio },
+    { id: "library", label: "Recordings", icon: Library },
+    { id: "ads", label: "Ad Insights", icon: Sparkles },
+    { id: "request", label: "Request Recording", icon: Mic },
+  ] as const;
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans">
-      <audio ref={audioRef} onPlay={() => setIsLivePlaying(true)} onPause={() => setIsLivePlaying(false)} />
+      <audio
+        ref={audioRef}
+        onPlay={() => setIsLivePlaying(true)}
+        onPause={() => setIsLivePlaying(false)}
+      />
+
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-white/5 bg-black/40 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -88,18 +109,17 @@ export function UserDashboard({ onSignOut }: UserDashboardProps) {
             <Bell className="w-4 h-4 text-white/40" />
           </div>
 
-          {/* User Menu */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
             >
               <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">
-                {user?.email?.[0].toUpperCase() || "U"}
+                {user?.email?.[0].toUpperCase() ?? "U"}
               </div>
               <div className="hidden md:block text-left">
                 <div className="text-xs font-bold text-white/90 leading-tight">
-                  {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User"}
+                  {user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "User"}
                 </div>
                 <div className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Viewer</div>
               </div>
@@ -117,7 +137,7 @@ export function UserDashboard({ onSignOut }: UserDashboardProps) {
                   <div className="p-4 border-b border-white/5">
                     <div className="flex items-center justify-between mb-1">
                       <div className="text-sm font-bold text-white/90">
-                        {user?.user_metadata?.full_name || "User"}
+                        {user?.user_metadata?.full_name ?? "User"}
                       </div>
                       <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
                         user
@@ -142,19 +162,14 @@ export function UserDashboard({ onSignOut }: UserDashboardProps) {
       </header>
 
       {/* Tab Navigation */}
-      <div className="border-b border-white/5 px-6">
-        <div className="flex gap-1 max-w-md">
-          {[
-            { id: "stations", label: "Live Stations", icon: Radio },
-            { id: "library", label: "Recordings", icon: Library },
-            { id: "ads", label: "Ad Insights", icon: Sparkles },
-            { id: "request", label: "Request Recording", icon: Mic },
-          ].map((tab) => (
+      <div className="border-b border-white/5 px-6 overflow-x-auto">
+        <div className="flex gap-1 min-w-max">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-4 text-sm font-bold border-b-2 transition-all",
+                "flex items-center gap-2 px-4 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap",
                 activeTab === tab.id
                   ? "border-orange-500 text-white"
                   : "border-transparent text-white/40 hover:text-white/70"
@@ -169,146 +184,160 @@ export function UserDashboard({ onSignOut }: UserDashboardProps) {
 
       {/* Content */}
       <main className="p-6 max-w-6xl mx-auto">
-        <AnimatePresence mode="wait">
-          {activeTab === "stations" && (
-            <motion.div
-              key="stations"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-            >
-              <div className="mb-6">
-                <h2 className="text-2xl font-black tracking-tight">Live Stations</h2>
-                <p className="text-sm text-white/40 mt-1">Ethiopian radio stations — listen live</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {stations.map((station) => {
-                  const isCurrentLive = currentLiveStation?.id === station.id;
-                  return (
-                    <div
-                      key={station.id}
-                      className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.05] transition-all"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
-                          <Radio className="w-5 h-5 text-white/60" />
-                        </div>
-                        <button
-                          onClick={() => handleLivePlay(station)}
-                          className={cn(
-                            "w-9 h-9 rounded-full flex items-center justify-center transition-all",
-                            isCurrentLive && isLivePlaying
-                              ? "bg-white text-black"
-                              : "bg-orange-600 text-white hover:bg-orange-500"
-                          )}
-                        >
-                          {isCurrentLive && isLivePlaying
-                            ? <Pause className="w-4 h-4 fill-current" />
-                            : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                        </button>
-                      </div>
-                      <h3 className="text-base font-bold mb-1">{station.title}</h3>
-                      <div className="flex items-center gap-1.5 text-white/40 text-xs">
-                        <MapPin className="w-3 h-3" />
-                        {station.city}, Ethiopia
-                      </div>
-                      {isCurrentLive && isLivePlaying && (
-                        <div className="mt-3 flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                          <span className="text-[10px] text-green-500 font-black uppercase tracking-wider">Live</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === "library" && (
-            <motion.div
-              key="library"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-            >
-              <div className="mb-6">
-                <h2 className="text-2xl font-black tracking-tight">Recordings Library</h2>
-                <p className="text-sm text-white/40 mt-1">{recordings.length} recordings available</p>
-              </div>
-              {recordings.length === 0 ? (
-                <div className="text-center py-20 text-white/20">
-                  <Library className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  <p className="font-bold">No recordings yet</p>
+        {dataLoading ? (
+          <div className="flex items-center justify-center py-20 text-white/20">
+            <RefreshCw className="w-6 h-6 animate-spin mr-3" />
+            <span>Loading...</span>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            {activeTab === "stations" && (
+              <motion.div
+                key="stations"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+              >
+                <div className="mb-6">
+                  <h2 className="text-2xl font-black tracking-tight">Live Stations</h2>
+                  <p className="text-sm text-white/40 mt-1">Ethiopian radio stations — listen live</p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {recordings.slice(0, 20).map((rec, i) => (
-                    <div key={i} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold">{rec.station?.replace(/_/g, " ")}</div>
-                        <div className="text-xs text-white/40">{rec.date} • {rec.file}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
+                {stations.length === 0 ? (
+                  <div className="text-center py-20 text-white/20">
+                    <Radio className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-bold">No stations available</p>
+                    <p className="text-xs mt-1">Backend may be offline</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {stations.map((station) => {
+                      const isCurrentLive = currentLiveStation?.id === station.id;
+                      return (
+                        <div
+                          key={station.id}
+                          className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.05] transition-all"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
+                              <Radio className="w-5 h-5 text-white/60" />
+                            </div>
+                            <button
+                              onClick={() => handleLivePlay(station)}
+                              className={cn(
+                                "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                                isCurrentLive && isLivePlaying
+                                  ? "bg-white text-black"
+                                  : "bg-orange-600 text-white hover:bg-orange-500"
+                              )}
+                            >
+                              {isCurrentLive && isLivePlaying
+                                ? <Pause className="w-4 h-4 fill-current" />
+                                : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                            </button>
+                          </div>
+                          <h3 className="text-base font-bold mb-1">{station.title}</h3>
+                          <div className="flex items-center gap-1.5 text-white/40 text-xs">
+                            <MapPin className="w-3 h-3" />
+                            {station.city}, Ethiopia
+                          </div>
+                          {isCurrentLive && isLivePlaying && (
+                            <div className="mt-3 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                              <span className="text-[10px] text-green-500 font-black uppercase tracking-wider">Live</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === "library" && (
+              <motion.div
+                key="library"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+              >
+                <div className="mb-6">
+                  <h2 className="text-2xl font-black tracking-tight">Recordings Library</h2>
+                  <p className="text-sm text-white/40 mt-1">{recordings.length} recordings available</p>
+                </div>
+                {recordings.length === 0 ? (
+                  <div className="text-center py-20 text-white/20">
+                    <Library className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-bold">No recordings yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recordings.slice(0, 20).map((rec, i) => (
+                      <div key={i} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold">{rec.station?.replace(/_/g, " ")}</div>
+                          <div className="text-xs text-white/40">{rec.date} • {rec.file}</div>
+                        </div>
                         {rec.isAnalyzed && (
                           <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-1 rounded-lg font-bold">Analyzed</span>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-          {activeTab === "ads" && (            <motion.div
-              key="ads"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-            >
-              <div className="mb-6">
-                <h2 className="text-2xl font-black tracking-tight">Ad Insights</h2>
-                <p className="text-sm text-white/40 mt-1">Brand advertising overview</p>
-              </div>
-              {!adStats?.brands || Object.keys(adStats.brands).length === 0 ? (
-                <div className="text-center py-20 text-white/20">
-                  <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  <p className="font-bold">No ad data yet</p>
+            {activeTab === "ads" && (
+              <motion.div
+                key="ads"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+              >
+                <div className="mb-6">
+                  <h2 className="text-2xl font-black tracking-tight">Ad Insights</h2>
+                  <p className="text-sm text-white/40 mt-1">Brand advertising overview</p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(adStats.brands).slice(0, 12).map(([brand, data]: [string, any]) => (
-                    <div key={brand} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-xl font-black text-orange-500">
-                        {brand[0]}
+                {!adStats?.brands || Object.keys(adStats.brands).length === 0 ? (
+                  <div className="text-center py-20 text-white/20">
+                    <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-bold">No ad data yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(adStats.brands).slice(0, 12).map(([brand, data]: [string, any]) => (
+                      <div key={brand} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-xl font-black text-orange-500">
+                          {brand[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold truncate">{brand}</div>
+                          <div className="text-xs text-white/40">{data.instances?.[0]?.industry ?? "General"}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-black text-orange-500">{data.count}x</div>
+                          <div className="text-[10px] text-white/40">spots</div>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold truncate">{brand}</div>
-                        <div className="text-xs text-white/40">{data.instances?.[0]?.industry || "General"}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-black text-orange-500">{data.count}x</div>
-                        <div className="text-[10px] text-white/40">spots</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-          {activeTab === "request" && (
-            <motion.div
-              key="request"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-            >
-              <RecordingRequestForm stations={stations} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {activeTab === "request" && (
+              <motion.div
+                key="request"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+              >
+                <RecordingRequestForm stations={stations} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
       </main>
     </div>
   );
