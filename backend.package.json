@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node --loader tsx server.ts",
+    "start": "node --import tsx server.ts",
     "dev": "tsx server.ts",
     "build": "tsc",
     "pm2:start": "pm2 start ecosystem.config.cjs",
