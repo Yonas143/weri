@@ -10,6 +10,14 @@ const MODEL = "gemini-3-flash-preview";
  * Detects, transcribes, and categorizes advertisements.
  */
 export async function analyzeCommercials(filePath: string) {
+  // Guard: skip files larger than 50MB to prevent OOM
+  const stats = fs.statSync(filePath);
+  const fileSizeMB = stats.size / (1024 * 1024);
+  if (fileSizeMB > 50) {
+    console.warn(`Skipping analysis for ${filePath} — file too large (${fileSizeMB.toFixed(1)}MB)`);
+    throw new Error(`File too large for analysis: ${fileSizeMB.toFixed(1)}MB (max 50MB)`);
+  }
+
   const audioData = fs.readFileSync(filePath);
   const base64Audio = audioData.toString("base64");
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthProvider';
+import { API_URL } from '../config';
 
 export type UserRole = 'admin' | 'user' | null;
 
@@ -18,20 +19,27 @@ export function useUserRole() {
       }
 
       try {
-        // Use maybeSingle to avoid error when row doesn't exist
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Get the session token to send to backend
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-        if (error) {
-          console.error('Error fetching user role:', error.message, error.code);
-          // If table doesn't exist or RLS blocks, check user metadata as fallback
-          const metaRole = user.user_metadata?.role;
-          setRole(metaRole === 'admin' ? 'admin' : 'user');
+        if (!token) {
+          setRole('user');
+          setLoading(false);
+          return;
+        }
+
+        // Use backend endpoint which uses service role key (bypasses RLS)
+        const res = await fetch(`${API_URL}/api/user/role`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setRole(data.role as UserRole || 'user');
         } else {
-          setRole((data?.role as UserRole) || 'user');
+          setRole('user');
         }
       } catch (err) {
         console.error('Failed to fetch role:', err);
@@ -48,6 +56,6 @@ export function useUserRole() {
     role,
     loading,
     isAdmin: role === 'admin',
-    isUser: role === 'user'
+    isUser: role === 'user',
   };
 }

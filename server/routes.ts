@@ -9,18 +9,20 @@ import { getSchedules, saveSchedules, getSettings, saveSettings } from "./storag
 import { analyzeCommercials, detectLanguage, aiSearch, extractToStructuredData } from "./ai.js";
 import { getUsageStats } from "./usage.js";
 
+// Sanitize path params to prevent directory traversal
+function sanitizeParam(param: string): string {
+  return param.replace(/[^a-zA-Z0-9_\-\.]/g, "_").replace(/\.\./g, "_");
+}
+
 export async function setupRoutes(app: express.Application) {
-  // CORS Configuration
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
     'http://localhost:5173',
     'http://localhost:3000'
   ];
-  
+
   app.use(cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      
       if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
         callback(null, true);
       } else {
@@ -32,13 +34,49 @@ export async function setupRoutes(app: express.Application) {
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
 
-  app.use(express.json());
+  // Limit request body size to prevent memory attacks
+  app.use(express.json({ limit: '1mb' }));
+
+  // Security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+  });
 
   // API Routes
 
   // Health check
   app.get("/health", (req, res) => {
     res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+  });
+
+  // User role check — uses service role key to bypass RLS
+  app.get("/api/user/role", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ role: "user" });
+    }
+    const token = authHeader.slice(7);
+    if (!supabase) return res.json({ role: "user" });
+
+    try {
+      // Verify the JWT and get user
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (error || !user) return res.json({ role: "user" });
+
+      // Query role using service role (bypasses RLS)
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      res.json({ role: data?.role || "user" });
+    } catch {
+      res.json({ role: "user" });
+    }
   });
 
   app.get("/api/stations", (req, res) => {
@@ -175,15 +213,21 @@ export async function setupRoutes(app: express.Application) {
   });
 
   app.post("/api/analyze/:station/:date/:file", async (req, res) => {
-    const { station, date, file } = req.params;
+    const station = sanitizeParam(req.params.station);
+    const date = sanitizeParam(req.params.date);
+    const file = sanitizeParam(req.params.file);
     const filePath = path.join(RECORDINGS_DIR, station, date, file);
+
+    // Ensure path stays within RECORDINGS_DIR
+    if (!filePath.startsWith(RECORDINGS_DIR)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "File not found locally" });
     }
 
     try {
-      // Use the new modular analysis
       const analysis = await analyzeCommercials(filePath);
       const analysisPath = filePath + ".json";
       fs.writeFileSync(analysisPath, JSON.stringify(analysis, null, 2));
@@ -318,24 +362,39 @@ export async function setupRoutes(app: express.Application) {
   });
 
   app.get("/api/analysis/:station/:date/:file", (req, res) => {
-    const { station, date, file } = req.params;
+    const station = sanitizeParam(req.params.station);
+    const date = sanitizeParam(req.params.date);
+    const file = sanitizeParam(req.params.file);
     const analysisPath = path.join(RECORDINGS_DIR, station, date, file + ".json");
 
+    if (!analysisPath.startsWith(RECORDINGS_DIR)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
+
     if (fs.existsSync(analysisPath)) {
-      const analysis = JSON.parse(fs.readFileSync(analysisPath, "utf-8"));
-      res.json(analysis);
+      try {
+        const analysis = JSON.parse(fs.readFileSync(analysisPath, "utf-8"));
+        res.json(analysis);
+      } catch {
+        res.status(500).json({ error: "Failed to parse analysis" });
+      }
     } else {
       res.status(404).json({ error: "Analysis not found" });
     }
   });
 
   app.post("/api/analysis/:station/:date/:file", (req, res) => {
-    const { station, date, file } = req.params;
+    const station = sanitizeParam(req.params.station);
+    const date = sanitizeParam(req.params.date);
+    const file = sanitizeParam(req.params.file);
     const analysisPath = path.join(RECORDINGS_DIR, station, date, file + ".json");
-    
+
+    if (!analysisPath.startsWith(RECORDINGS_DIR)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
+
     try {
-      const analysis = req.body;
-      fs.writeFileSync(analysisPath, JSON.stringify(analysis, null, 2));
+      fs.writeFileSync(analysisPath, JSON.stringify(req.body, null, 2));
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -682,34 +741,47 @@ export async function setupRoutes(app: express.Application) {
       return res.status(400).json({ error: "Missing parameters" });
     }
 
-    const fullInputPath = path.join(process.cwd(), filePath as string);
+    // Sanitize and validate path stays within RECORDINGS_DIR
+    const safePath = path.normalize(path.join(process.cwd(), filePath as string));
+    if (!safePath.startsWith(RECORDINGS_DIR) && !safePath.startsWith(path.join(process.cwd(), "recordings"))) {
+      return res.status(400).json({ error: "Invalid file path" });
+    }
+
+    if (!fs.existsSync(safePath)) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
     const tempDir = path.join(process.cwd(), "temp_clips");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
-    
-    const fileName = `${outputName || "clip"}_${Date.now()}.mp3`;
+
+    const safeName = String(outputName || "clip").replace(/[^a-zA-Z0-9_\-]/g, "_");
+    const fileName = `${safeName}_${Date.now()}.mp3`;
     const outputPath = path.join(tempDir, fileName);
 
     const cmd = [
-      "-ss", startTime as string,
-      "-i", fullInputPath,
-      "-t", duration as string,
+      "-ss", String(startTime),
+      "-i", safePath,
+      "-t", String(duration),
       "-c", "copy",
       outputPath
     ];
 
     const proc = spawn("ffmpeg", cmd);
 
+    // Kill ffmpeg after 60 seconds to prevent hanging
+    const timeout = setTimeout(() => {
+      proc.kill("SIGKILL");
+      if (!res.headersSent) res.status(500).json({ error: "Clipping timed out" });
+    }, 60000);
+
     proc.on("close", (code) => {
+      clearTimeout(timeout);
       if (code === 0) {
         res.download(outputPath, fileName, (err) => {
-          if (!err) {
-            setTimeout(() => {
-              if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-            }, 60000);
-          }
+          if (!err) setTimeout(() => { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); }, 60000);
         });
       } else {
-        res.status(500).json({ error: "Clipping failed" });
+        if (!res.headersSent) res.status(500).json({ error: "Clipping failed" });
       }
     });
   });

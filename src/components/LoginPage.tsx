@@ -13,6 +13,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -37,8 +38,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
       setError(error.message);
       setLoading(false);
     } else if (isSignUp) {
-      setError('');
-      alert('Check your email to confirm your account!');
+      setSignUpSuccess(true);
       setLoading(false);
     }
   };
@@ -86,6 +86,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
               ? 'Sign up to access the radio intelligence platform'
               : 'Sign in to continue to your dashboard'}
           </p>
+
+          {/* Success Message */}
+          {signUpSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-center"
+            >
+              <p className="text-sm text-green-400 font-bold">Check your email to confirm your account!</p>
+              <p className="text-xs text-green-400/60 mt-1">Then sign in below.</p>
+            </motion.div>
+          )}
 
           {/* Error Message */}
           {error && (

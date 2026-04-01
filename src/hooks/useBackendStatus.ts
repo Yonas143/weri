@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "../config";
 
 export type BackendStatus = "online" | "offline" | "checking";
@@ -6,21 +6,23 @@ export type BackendStatus = "online" | "offline" | "checking";
 export function useBackendStatus() {
   const [status, setStatus] = useState<BackendStatus>("checking");
 
-  const check = async () => {
+  const check = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(`${API_URL}/health`, {
+        signal: AbortSignal.timeout(5000),
+        cache: "no-store",
+      });
       setStatus(res.ok ? "online" : "offline");
     } catch {
       setStatus("offline");
     }
-  };
+  }, []);
 
   useEffect(() => {
     check();
-    // Re-check every 30 seconds
     const interval = setInterval(check, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [check]);
 
   return { status, retry: check };
 }
