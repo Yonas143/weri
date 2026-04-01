@@ -66,6 +66,7 @@ import { analyzeCommercialsFrontend, generateEmbeddingsFrontend } from "./servic
 import { useAuth } from "./components/AuthProvider";
 import { LoginPage } from "./components/LoginPage";
 import { LandingPage } from "./components/LandingPage";
+import { UserDashboard } from "./components/UserDashboard";
 import { useUserRole } from "./hooks/useUserRole";
 
 interface Station {
@@ -448,6 +449,21 @@ export default function App() {
   // Show login page if not authenticated
   if (!user) {
     return <LoginPage onBackToLanding={() => setShowLanding(true)} />;
+  }
+
+  // Show limited user dashboard for non-admin users
+  if (!isAdmin) {
+    return (
+      <UserDashboard
+        stations={stations}
+        recordings={recordings}
+        adStats={adStats}
+        currentLiveStation={currentLiveStation}
+        isLivePlaying={isLivePlaying}
+        onLivePlay={handleLivePlay}
+        onSignOut={signOut}
+      />
+    );
   }
 
   return (
