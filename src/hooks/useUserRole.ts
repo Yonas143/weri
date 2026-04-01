@@ -18,17 +18,20 @@ export function useUserRole() {
       }
 
       try {
+        // Use maybeSingle to avoid error when row doesn't exist
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
-          console.error('Error fetching user role:', error);
-          setRole('user'); // Default to user if error
+          console.error('Error fetching user role:', error.message, error.code);
+          // If table doesn't exist or RLS blocks, check user metadata as fallback
+          const metaRole = user.user_metadata?.role;
+          setRole(metaRole === 'admin' ? 'admin' : 'user');
         } else {
-          setRole(data?.role as UserRole || 'user');
+          setRole((data?.role as UserRole) || 'user');
         }
       } catch (err) {
         console.error('Failed to fetch role:', err);
@@ -39,7 +42,7 @@ export function useUserRole() {
     }
 
     fetchRole();
-  }, [user]);
+  }, [user?.id]);
 
   return {
     role,
