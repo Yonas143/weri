@@ -14,6 +14,8 @@ import { LandingPage } from "./components/LandingPage";
 import { LoginPage } from "./components/LoginPage";
 import { UserDashboard } from "./components/UserDashboard";
 import { RecordingRequestsAdmin } from "./components/RecordingRequestsAdmin";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ToastContainer } from "./components/ToastContainer";
 import { StationsTab } from "./tabs/StationsTab";
 import { ScheduleTab } from "./tabs/ScheduleTab";
 import { ManifestTab } from "./tabs/ManifestTab";
@@ -28,18 +30,18 @@ import { LibraryTab } from "./tabs/LibraryTab";
 import { TabId } from "./types";
 
 const NAV_ITEMS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: "mission",   label: "Mission Control",     icon: LayoutDashboard },
-  { id: "stations",  label: "Live Stations",        icon: Mic },
-  { id: "library",   label: "Media Library",        icon: Library },
-  { id: "ads",       label: "Ad Insights",          icon: Sparkles },
-  { id: "schedule",  label: "Recording Schedule",   icon: Calendar },
-  { id: "search",    label: "Search & Clip",        icon: Search },
-  { id: "reports",   label: "Proof of Play",        icon: FileText },
-  { id: "database",  label: "Analysis Database",    icon: Database },
-  { id: "triggers",  label: "Keyword Alerts",       icon: Zap },
-  { id: "requests",  label: "User Requests",        icon: Bell },
-  { id: "manifest",  label: "System Manifest",      icon: Layers },
-  { id: "settings",  label: "Settings",             icon: Settings },
+  { id: "mission",  label: "Mission Control",   icon: LayoutDashboard },
+  { id: "stations", label: "Live Stations",      icon: Mic },
+  { id: "library",  label: "Media Library",      icon: Library },
+  { id: "ads",      label: "Ad Insights",        icon: Sparkles },
+  { id: "schedule", label: "Recording Schedule", icon: Calendar },
+  { id: "search",   label: "Search & Clip",      icon: Search },
+  { id: "reports",  label: "Proof of Play",      icon: FileText },
+  { id: "database", label: "Analysis Database",  icon: Database },
+  { id: "triggers", label: "Keyword Alerts",     icon: Zap },
+  { id: "requests", label: "User Requests",      icon: Bell },
+  { id: "manifest", label: "System Manifest",    icon: Layers },
+  { id: "settings", label: "Settings",           icon: Settings },
 ];
 
 export default function App() {
@@ -47,7 +49,6 @@ export default function App() {
   const { isAdmin, loading: roleLoading } = useUserRole();
   const { status: backendStatus, retry } = useBackendStatus();
   const data = useAppData();
-
   const [activeTab, setActiveTab] = useState<TabId>("mission");
   const [showLanding, setShowLanding] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -109,7 +110,6 @@ export default function App() {
                 <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em] mt-1">Intelligence Engine</p>
               </div>
             </div>
-
             <nav className="flex-1 space-y-1.5 overflow-y-auto pr-2 custom-scrollbar">
               <div className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-4 px-3">Main Systems</div>
               {NAV_ITEMS.map((item) => (
@@ -126,7 +126,6 @@ export default function App() {
                 </button>
               ))}
             </nav>
-
             <div className="mt-auto pt-6 border-t border-white/5">
               <div className="glass-card p-4 rounded-2xl bg-orange-500/5 border-orange-500/10">
                 <div className="flex items-center gap-3">
@@ -150,7 +149,7 @@ export default function App() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5 truncate">
-                      Now Playing • {data.playingFile.station.replace(/_/g, " ")}
+                      Now Playing - {data.playingFile.station.replace(/_/g, " ")}
                     </div>
                     <div className="text-sm font-black text-white truncate tracking-tight">
                       {data.playingFile.file.replace(".mp3", "").replace(/-/g, " ")}
@@ -168,7 +167,6 @@ export default function App() {
                 </div>
               )}
             </div>
-
             <div className="flex items-center gap-4 ml-auto">
               {data.usageStats && (
                 <div className="hidden sm:flex items-center gap-3 px-4 py-1.5 bg-white/5 rounded-full border border-white/10">
@@ -176,7 +174,6 @@ export default function App() {
                   <span className="text-xs font-mono font-bold text-white/80">{(data.usageStats.totalTokens / 1000).toFixed(1)}k tokens</span>
                 </div>
               )}
-
               <div className="relative">
                 <button onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
@@ -191,7 +188,6 @@ export default function App() {
                   </div>
                   <ChevronDown className={cn("w-4 h-4 text-white/40 transition-transform", showUserMenu && "rotate-180")} />
                 </button>
-
                 <AnimatePresence>
                   {showUserMenu && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
@@ -218,31 +214,31 @@ export default function App() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-            </ErrorBoundary>
               </div>
             </div>
           </header>
 
           <main className="flex-1 p-6 lg:p-10 overflow-x-hidden">
             <ErrorBoundary>
-            <AnimatePresence mode="wait">
-              {activeTab === "mission" && <MissionTab stations={data.stations} status={data.status} recordings={data.recordings} adStats={data.adStats} musicStats={data.musicStats} usageStats={data.usageStats} setPlayingFile={data.setPlayingFile} setActiveTab={setActiveTab} />}
-              {activeTab === "stations" && <StationsTab stations={data.stations} status={data.status} currentLiveStation={data.currentLiveStation} isLivePlaying={data.isLivePlaying} isAdmin={isAdmin} onLivePlay={data.handleLivePlay} onStart={data.startRecording} onStop={data.stopRecording} />}
-              {activeTab === "library" && <LibraryTab recordings={data.recordings} playingFile={data.playingFile} analyzing={data.analyzing} onPlay={data.setPlayingFile} onAnalyze={data.fetchAnalysis} onClip={data.handleClip} />}
-              {activeTab === "ads" && <AdsTab adStats={data.adStats} adView={data.adView} setAdView={data.setAdView} onPlay={data.setPlayingFile} onSnapToTime={data.snapToTime} />}
-              {activeTab === "schedule" && <ScheduleTab schedules={data.schedules} stations={data.stations} onAdd={data.addSchedule} onRemove={data.removeSchedule} />}
-              {activeTab === "search" && <SearchTab searchQuery={data.searchQuery} setSearchQuery={data.setSearchQuery} searchResults={data.searchResults} semanticSearchResults={data.semanticSearchResults} isSearching={data.isSearching} isSemanticSearching={data.isSemanticSearching} onSearch={data.handleSearch} onSemanticSearch={data.handleSemanticSearch} onPlay={data.setPlayingFile} onClip={data.handleClip} onViewAnalysis={data.setSelectedAnalysis} />}
-              {activeTab === "reports" && <ReportsTab adStats={data.adStats} selectedBrand={data.selectedReportBrand} setSelectedBrand={data.setSelectedReportBrand} selectedPeriod={data.selectedReportPeriod} setSelectedPeriod={data.setSelectedReportPeriod} generatedReport={data.generatedReport} onGenerate={data.generateReport} />}
-              {activeTab === "database" && <DatabaseTab analysisHistory={data.analysisHistory} recordings={data.recordings} onPlay={data.setPlayingFile} onViewAnalysis={data.fetchAnalysis} />}
-              {activeTab === "triggers" && <TriggersTab analysisHistory={data.analysisHistory} recordings={data.recordings} settings={data.settings} onPlay={data.setPlayingFile} onViewAnalysis={data.fetchAnalysis} onUpdateSettings={data.updateSettings} />}
-              {activeTab === "requests" && (
-                <motion.div key="requests" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                  <RecordingRequestsAdmin />
-                </motion.div>
-              )}
-              {activeTab === "manifest" && <ManifestTab />}
-              {activeTab === "settings" && <SettingsTab settings={data.settings} usageStats={data.usageStats} onUpdate={data.updateSettings} />}
-            </AnimatePresence>
+              <AnimatePresence mode="wait">
+                {activeTab === "mission" && <MissionTab stations={data.stations} status={data.status} recordings={data.recordings} adStats={data.adStats} musicStats={data.musicStats} usageStats={data.usageStats} setPlayingFile={data.setPlayingFile} setActiveTab={setActiveTab} />}
+                {activeTab === "stations" && <StationsTab stations={data.stations} status={data.status} currentLiveStation={data.currentLiveStation} isLivePlaying={data.isLivePlaying} isAdmin={isAdmin} onLivePlay={data.handleLivePlay} onStart={data.startRecording} onStop={data.stopRecording} />}
+                {activeTab === "library" && <LibraryTab recordings={data.recordings} playingFile={data.playingFile} analyzing={data.analyzing} onPlay={data.setPlayingFile} onAnalyze={data.fetchAnalysis} onClip={data.handleClip} />}
+                {activeTab === "ads" && <AdsTab adStats={data.adStats} adView={data.adView} setAdView={data.setAdView} onPlay={data.setPlayingFile} onSnapToTime={data.snapToTime} />}
+                {activeTab === "schedule" && <ScheduleTab schedules={data.schedules} stations={data.stations} onAdd={data.addSchedule} onRemove={data.removeSchedule} />}
+                {activeTab === "search" && <SearchTab searchQuery={data.searchQuery} setSearchQuery={data.setSearchQuery} searchResults={data.searchResults} semanticSearchResults={data.semanticSearchResults} isSearching={data.isSearching} isSemanticSearching={data.isSemanticSearching} onSearch={data.handleSearch} onSemanticSearch={data.handleSemanticSearch} onPlay={data.setPlayingFile} onClip={data.handleClip} onViewAnalysis={data.setSelectedAnalysis} />}
+                {activeTab === "reports" && <ReportsTab adStats={data.adStats} selectedBrand={data.selectedReportBrand} setSelectedBrand={data.setSelectedReportBrand} selectedPeriod={data.selectedReportPeriod} setSelectedPeriod={data.setSelectedReportPeriod} generatedReport={data.generatedReport} onGenerate={data.generateReport} />}
+                {activeTab === "database" && <DatabaseTab analysisHistory={data.analysisHistory} recordings={data.recordings} onPlay={data.setPlayingFile} onViewAnalysis={data.fetchAnalysis} />}
+                {activeTab === "triggers" && <TriggersTab analysisHistory={data.analysisHistory} recordings={data.recordings} settings={data.settings} onPlay={data.setPlayingFile} onViewAnalysis={data.fetchAnalysis} onUpdateSettings={data.updateSettings} />}
+                {activeTab === "requests" && (
+                  <motion.div key="requests" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                    <RecordingRequestsAdmin />
+                  </motion.div>
+                )}
+                {activeTab === "manifest" && <ManifestTab />}
+                {activeTab === "settings" && <SettingsTab settings={data.settings} usageStats={data.usageStats} onUpdate={data.updateSettings} />}
+              </AnimatePresence>
+            </ErrorBoundary>
           </main>
         </div>
       </div>
@@ -269,6 +265,7 @@ export default function App() {
           ))}
         </AnimatePresence>
       </div>
+
       <ToastContainer toasts={data.toasts} onDismiss={data.dismissToast} />
     </div>
   );
