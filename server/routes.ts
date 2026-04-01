@@ -3,7 +3,6 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { spawn } from "child_process";
-import { createServer as createViteServer } from "vite";
 import { RECORDINGS_DIR, STATIONS_PATH, supabase, BUCKET_NAME } from "./config.js";
 import { activeRecordings, startRecording, stopRecording } from "./recording.js";
 import { getSchedules, saveSchedules, getSettings, saveSettings } from "./storage.js";
@@ -712,6 +711,8 @@ export async function setupRoutes(app: express.Application) {
   app.use("/recordings", express.static(RECORDINGS_DIR));
 
   if (process.env.NODE_ENV !== "production") {
+    // Only import Vite in development mode
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -719,9 +720,11 @@ export async function setupRoutes(app: express.Application) {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   }
 }
