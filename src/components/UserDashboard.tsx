@@ -1,8 +1,9 @@
 import React from "react";
-import { Radio, Play, Pause, MapPin, Library, Sparkles, LogOut, ChevronDown, Bell } from "lucide-react";
+import { Radio, Play, Pause, MapPin, Library, Sparkles, LogOut, ChevronDown, Bell, Mic } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/src/lib/utils";
 import { useAuth } from "./AuthProvider";
+import { RecordingRequestForm } from "./RecordingRequestForm";
 
 interface Station {
   id: string;
@@ -31,7 +32,7 @@ export function UserDashboard({
 }: UserDashboardProps) {
   const { user } = useAuth();
   const [showUserMenu, setShowUserMenu] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<"stations" | "library" | "ads">("stations");
+  const [activeTab, setActiveTab] = React.useState<"stations" | "library" | "ads" | "request">("stations");
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans">
@@ -111,6 +112,7 @@ export function UserDashboard({
             { id: "stations", label: "Live Stations", icon: Radio },
             { id: "library", label: "Recordings", icon: Library },
             { id: "ads", label: "Ad Insights", icon: Sparkles },
+            { id: "request", label: "Request Recording", icon: Mic },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -223,8 +225,7 @@ export function UserDashboard({
             </motion.div>
           )}
 
-          {activeTab === "ads" && (
-            <motion.div
+          {activeTab === "ads" && (            <motion.div
               key="ads"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -258,6 +259,17 @@ export function UserDashboard({
                   ))}
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {activeTab === "request" && (
+            <motion.div
+              key="request"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+            >
+              <RecordingRequestForm stations={stations} />
             </motion.div>
           )}
         </AnimatePresence>

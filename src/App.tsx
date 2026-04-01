@@ -67,6 +67,7 @@ import { useAuth } from "./components/AuthProvider";
 import { LoginPage } from "./components/LoginPage";
 import { LandingPage } from "./components/LandingPage";
 import { UserDashboard } from "./components/UserDashboard";
+import { RecordingRequestsAdmin } from "./components/RecordingRequestsAdmin";
 import { useUserRole } from "./hooks/useUserRole";
 
 interface Station {
@@ -101,7 +102,7 @@ export default function App() {
   const [stations, setStations] = useState<Station[]>([]);
   const [status, setStatus] = useState<RecordingStatus>({});
   const [recordings, setRecordings] = useState<RecordingFile[]>([]);
-  const [activeTab, setActiveTab] = useState<"mission" | "stations" | "library" | "ads" | "schedule" | "search" | "settings" | "manifest" | "reports" | "database" | "triggers">("mission");
+  const [activeTab, setActiveTab] = useState<"mission" | "stations" | "library" | "ads" | "schedule" | "search" | "settings" | "manifest" | "reports" | "database" | "triggers" | "requests">("mission");
   const [settings, setSettings] = useState({
     amharicNormalizer: true,
     lowResPreview: false,
@@ -515,6 +516,7 @@ export default function App() {
                 { id: "reports", label: "Proof of Play", icon: FileText },
                 { id: "database", label: "Analysis Database", icon: Database },
                 { id: "triggers", label: "Keyword Alerts", icon: Zap },
+                { id: "requests", label: "User Requests", icon: Bell },
                 { id: "manifest", label: "System Manifest", icon: Layers },
                 { id: "settings", label: "Settings", icon: Settings },
               ].map((item) => (
