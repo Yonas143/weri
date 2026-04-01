@@ -66,6 +66,7 @@ import { analyzeCommercialsFrontend, generateEmbeddingsFrontend } from "./servic
 import { useAuth } from "./components/AuthProvider";
 import { LoginPage } from "./components/LoginPage";
 import { LandingPage } from "./components/LandingPage";
+import { useUserRole } from "./hooks/useUserRole";
 
 interface Station {
   id: string;
@@ -93,6 +94,7 @@ interface RecordingFile {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
+  const { role, isAdmin, loading: roleLoading } = useUserRole();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
   const [stations, setStations] = useState<Station[]>([]);
@@ -425,7 +427,7 @@ export default function App() {
   };
 
   // Show loading state while checking auth
-  if (authLoading) {
+  if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center">
         <div className="text-center">
@@ -634,8 +636,20 @@ export default function App() {
                       className="absolute right-0 mt-2 w-64 glass-card rounded-2xl border border-white/10 overflow-hidden shadow-2xl z-50"
                     >
                       <div className="p-4 border-b border-white/5">
-                        <div className="text-sm font-bold text-white/90 mb-1">
-                          {user?.user_metadata?.full_name || 'User'}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-sm font-bold text-white/90">
+                            {user?.user_metadata?.full_name || 'User'}
+                          </div>
+                          {role && (
+                            <span className={cn(
+                              "px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider",
+                              isAdmin 
+                                ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" 
+                                : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            )}>
+                              {role}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-white/40">{user?.email}</div>
                       </div>
@@ -1101,8 +1115,9 @@ export default function App() {
                           <div className="flex items-center gap-2">
                             <button 
                               onClick={() => stopRecording(station.id)}
-                              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-red-500/20"
-                              title="Stop and Save to Library"
+                              disabled={!isAdmin}
+                              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={isAdmin ? "Stop and Save to Library" : "Admin only"}
                             >
                               <Square className="w-4 h-4 fill-current" />
                               Save & Stop
@@ -1111,10 +1126,12 @@ export default function App() {
                         </>
                       ) : (
                         <>
-                          <div className="text-xs text-white/20 italic">Ready to record</div>
+                          <div className="text-xs text-white/20 italic">{isAdmin ? 'Ready to record' : 'Admin access required'}</div>
                           <button 
                             onClick={() => startRecording(station)}
-                            className="bg-white/5 text-white hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/10"
+                            disabled={!isAdmin}
+                            className="bg-white/5 text-white hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={isAdmin ? "Start Recording" : "Admin only"}
                           >
                             <Mic className="w-4 h-4" />
                             Record
