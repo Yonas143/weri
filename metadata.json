@@ -1,0 +1,5 @@
+{
+  "name": "Radio Garden Recorder",
+  "description": "A 24/7 radio stream recording manager with segmented storage and built-in playback.",
+  "requestFramePermissions": []
+}

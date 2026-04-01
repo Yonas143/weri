@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #f97316; /* orange-500 */
+  --color-brand-secondary: #ea580c; /* orange-600 */
+  --color-surface-950: #09090b; /* zinc-950 */
+  --color-surface-900: #18181b; /* zinc-900 */
+  --color-surface-800: #27272a; /* zinc-800 */
+  --color-surface-700: #3f3f46; /* zinc-700 */
+  
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-zinc-950 text-zinc-100 selection:bg-orange-500/30 selection:text-orange-200;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl;
+  }
+  
+  .glass-nav {
+    @apply bg-black/40 backdrop-blur-md border-b border-white/5 sticky top-0 z-50;
+  }
+  
+  .bento-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
+  
+  .pro-max-button {
+    @apply px-4 py-2 rounded-2xl font-bold text-sm transition-all active:scale-95 flex items-center gap-2;
+  }
+  
+  .pro-max-heading {
+    @apply text-4xl font-black tracking-tighter uppercase italic;
+  }
+}
+
+/* Custom scrollbar for Pro Max feel */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}

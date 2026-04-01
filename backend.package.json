@@ -1,0 +1,32 @@
+{
+  "name": "ethioradio-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --loader tsx server.ts",
+    "dev": "tsx server.ts",
+    "build": "tsc",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop ethioradio-backend",
+    "pm2:restart": "pm2 restart ethioradio-backend",
+    "pm2:logs": "pm2 logs ethioradio-backend"
+  },
+  "dependencies": {
+    "@google/genai": "^1.29.0",
+    "@supabase/supabase-js": "^2.101.1",
+    "chokidar": "^5.0.0",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "node-cron": "^4.2.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/cors": "^2.8.17",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
+  }
+}
