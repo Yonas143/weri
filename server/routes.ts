@@ -35,6 +35,12 @@ export async function setupRoutes(app: express.Application) {
   app.use(express.json());
 
   // API Routes
+
+  // Health check
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+  });
+
   app.get("/api/stations", (req, res) => {
     if (fs.existsSync(STATIONS_PATH)) {
       const stations = JSON.parse(fs.readFileSync(STATIONS_PATH, "utf-8"));
