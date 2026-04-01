@@ -218,11 +218,13 @@ export default function App() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+            </ErrorBoundary>
               </div>
             </div>
           </header>
 
           <main className="flex-1 p-6 lg:p-10 overflow-x-hidden">
+            <ErrorBoundary>
             <AnimatePresence mode="wait">
               {activeTab === "mission" && <MissionTab stations={data.stations} status={data.status} recordings={data.recordings} adStats={data.adStats} musicStats={data.musicStats} usageStats={data.usageStats} setPlayingFile={data.setPlayingFile} setActiveTab={setActiveTab} />}
               {activeTab === "stations" && <StationsTab stations={data.stations} status={data.status} currentLiveStation={data.currentLiveStation} isLivePlaying={data.isLivePlaying} isAdmin={isAdmin} onLivePlay={data.handleLivePlay} onStart={data.startRecording} onStop={data.stopRecording} />}
@@ -267,6 +269,7 @@ export default function App() {
           ))}
         </AnimatePresence>
       </div>
+      <ToastContainer toasts={data.toasts} onDismiss={data.dismissToast} />
     </div>
   );
 }

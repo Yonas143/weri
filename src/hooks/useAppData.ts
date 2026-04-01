@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Station, RecordingStatus, RecordingFile, AppSettings } from "../types";
 import { analyzeCommercialsFrontend, generateEmbeddingsFrontend } from "../services/ai";
+import { useToast } from "./useToast";
 
 const DEFAULT_SETTINGS: AppSettings = {
   amharicNormalizer: true,
@@ -12,6 +13,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export function useAppData() {
+  const { toasts, toast, dismiss } = useToast();
   const [stations, setStations] = useState<Station[]>([]);
   const [status, setStatus] = useState<RecordingStatus>({});
   const [recordings, setRecordings] = useState<RecordingFile[]>([]);
@@ -91,34 +93,58 @@ export function useAppData() {
   }, [fetchData]);
 
   const startRecording = async (station: Station) => {
-    await fetch(`/api/record/start/${station.id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ station, bitrate: settings.recordingQuality }),
-    });
-    fetchData();
+    try {
+      const res = await fetch(`/api/record/start/${station.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ station, bitrate: settings.recordingQuality }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast(`Recording started: ${station.title}`, "success");
+      fetchData();
+    } catch (e: any) {
+      toast(`Failed to start recording: ${e.message}`, "error");
+    }
   };
 
-  const stopRecording = (id: string) => {
-    fetch(`/api/record/stop/${id}`, { method: "POST" }).then(fetchData);
+  const stopRecording = async (id: string) => {
+    try {
+      const res = await fetch(`/api/record/stop/${id}`, { method: "POST" });
+      if (!res.ok) throw new Error(await res.text());
+      toast("Recording saved to library", "success");
+      fetchData();
+    } catch (e: any) {
+      toast(`Failed to stop recording: ${e.message}`, "error");
+    }
   };
 
   const updateSettings = async (newSettings: AppSettings) => {
     setSettings(newSettings);
-    await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newSettings),
-    });
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSettings),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast("Settings saved", "success");
+    } catch (e: any) {
+      toast(`Failed to save settings: ${e.message}`, "error");
+    }
   };
 
   const saveSchedules = async (newSchedules: any[]) => {
-    await fetch("/api/schedules", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newSchedules),
-    });
-    fetchData();
+    try {
+      const res = await fetch("/api/schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSchedules),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      fetchData();
+    } catch (e: any) {
+      toast(`Failed to save schedule: ${e.message}`, "error");
+    }
   };
 
   const addSchedule = (stationId: string, stationTitle: string, startHour: number, endHour: number, days: number[]) => {
@@ -178,9 +204,10 @@ export function useAppData() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(analysisData),
       });
+      toast("Analysis complete", "success");
       fetchData();
     } catch (error: any) {
-      alert(`Analysis failed: ${error.message}`);
+      toast(`Analysis failed: ${error.message}`, "error");
     } finally {
       setAnalyzing(null);
     }
@@ -192,7 +219,10 @@ export function useAppData() {
     setIsSearching(true);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+      if (!res.ok) throw new Error("Search failed");
       setSearchResults(await res.json());
+    } catch (e: any) {
+      toast(e.message, "error");
     } finally { setIsSearching(false); }
   };
 
@@ -206,7 +236,10 @@ export function useAppData() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: searchQuery }),
       });
-      if (res.ok) setSemanticSearchResults(await res.json());
+      if (!res.ok) throw new Error("Semantic search failed");
+      setSemanticSearchResults(await res.json());
+    } catch (e: any) {
+      toast(e.message, "error");
     } finally { setIsSemanticSearching(false); }
   };
 
@@ -259,5 +292,7 @@ export function useAppData() {
     // Actions
     startRecording, stopRecording, updateSettings, fetchAnalysis, analyzeRecording,
     snapToTime, fetchData,
+    // Toast
+    toasts, toast, dismissToast: dismiss,
   };
 }
