@@ -65,6 +65,7 @@ import { cn } from "@/src/lib/utils";
 import { analyzeCommercialsFrontend, generateEmbeddingsFrontend } from "./services/ai";
 import { useAuth } from "./components/AuthProvider";
 import { LoginPage } from "./components/LoginPage";
+import { LandingPage } from "./components/LandingPage";
 
 interface Station {
   id: string;
@@ -93,6 +94,7 @@ interface RecordingFile {
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
   const [stations, setStations] = useState<Station[]>([]);
   const [status, setStatus] = useState<RecordingStatus>({});
   const [recordings, setRecordings] = useState<RecordingFile[]>([]);
@@ -436,9 +438,14 @@ export default function App() {
     );
   }
 
+  // Show landing page if not authenticated and landing is visible
+  if (!user && showLanding) {
+    return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+  }
+
   // Show login page if not authenticated
   if (!user) {
-    return <LoginPage />;
+    return <LoginPage onBackToLanding={() => setShowLanding(true)} />;
   }
 
   return (

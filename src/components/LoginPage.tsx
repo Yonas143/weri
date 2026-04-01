@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { Radio, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Radio, Mail, Lock, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../lib/supabase';
 import { motion } from 'motion/react';
 
-export const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  onBackToLanding?: () => void;
+}
+
+export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,6 +50,17 @@ export const LoginPage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
+        {/* Back Button */}
+        {onBackToLanding && (
+          <button
+            onClick={onBackToLanding}
+            className="mb-6 flex items-center gap-2 text-white/40 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Back to home</span>
+          </button>
+        )}
+
         {/* Logo */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-4 mb-4">
