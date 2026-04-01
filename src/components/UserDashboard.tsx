@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/src/lib/utils";
 import { useAuth } from "./AuthProvider";
 import { RecordingRequestForm } from "./RecordingRequestForm";
+import { API_URL } from "../config";
 
 interface Station {
   id: string;
@@ -43,9 +44,9 @@ export function UserDashboard({ onSignOut }: UserDashboardProps) {
     const fetchData = async () => {
       try {
         const [stationsRes, recordingsRes, adsRes] = await Promise.all([
-          fetch("/api/stations"),
-          fetch("/api/recordings"),
-          fetch("/api/ads/stats"),
+          fetch(`${API_URL}/api/stations`),
+          fetch(`${API_URL}/api/recordings`),
+          fetch(`${API_URL}/api/ads/stats`),
         ]);
         if (stationsRes.ok) setStations(await stationsRes.json());
         if (recordingsRes.ok) setRecordings(await recordingsRes.json());
