@@ -94,7 +94,7 @@ NODE_ENV=production
 PORT=3000
 
 # Gemini API Key (REQUIRED)
-GEMINI_API_KEY=AIzaSyD23WbhRh7YsiCk45Ee_MZDd8mcfKtdeJM
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # Supabase (REQUIRED)
 SUPABASE_URL=your_supabase_url_here
