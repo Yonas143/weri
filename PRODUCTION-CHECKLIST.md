@@ -31,7 +31,7 @@ In Vercel Dashboard → Settings → Environment Variables:
 ```
 VITE_API_URL=http://136.115.62.42:3000
 VITE_SUPABASE_URL=https://cpeenhzumzxwjkpwdayb.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_OClnvROvuVQhUyHLxaVv0g_NBblV1Eq
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 VITE_GEMINI_API_KEY=your_gemini_key
 ```
 
