@@ -29,4 +29,4 @@ RUN mkdir -p recordings logs
 EXPOSE 3000
 
 # Start the server
-CMD ["node", "--loader", "tsx", "server.ts"]
+CMD ["node", "--import", "tsx", "server.ts"]

@@ -94,15 +94,14 @@ NODE_ENV=production
 PORT=3000
 
 # Gemini API Key (REQUIRED)
-GEMINI_API_KEY=your_actual_gemini_api_key_here
+GEMINI_API_KEY=AIzaSyD23WbhRh7YsiCk45Ee_MZDd8mcfKtdeJM
 
 # Supabase (REQUIRED)
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_URL=your_supabase_url_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
 # CORS - Add your Vercel URL after frontend deployment
-ALLOWED_ORIGINS=http://localhost:5173,https://your-app.vercel.app
-```
+ALLOWED_ORIGINS=http://localhost:5173,https://thewere.vercel.app/
 
 **Replace with your actual values!**
 
